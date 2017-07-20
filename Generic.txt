@@ -1,0 +1,213 @@
+Model
+=====
+ [Table("Categories")]
+    public class Category
+    {
+        [DatabaseGeneratedAttribute(DatabaseGeneratedOption.Identity), Key()]
+        public int Id { get; set; }
+
+        [Required]
+        public string Name { get; set; }
+
+        public virtual ICollection<BlogPost> BlogPosts { get; set; }
+    }
+
+[Table("BlogPosts")]
+    public class BlogPost
+    {
+        [DatabaseGeneratedAttribute(DatabaseGeneratedOption.Identity), Key()]
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string Content { get; set; }
+        public DateTime PublishDate { get; set; }
+
+        [ForeignKey("Category")]
+        public int CategoryId { get; set; }
+
+        public virtual Category Category { get; set; }
+    }
+
+Context
+=======
+
+  public sealed class BlogContext : DbContext
+    {
+        static BlogContext()
+        {
+            Database.SetInitializer<BlogContext>(null);
+        }
+
+        public BlogContext()
+            : base("name=TABFusionRMSContext")
+        {
+        }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
+        }
+
+        public DbSet<BlogPost> BlogPosts { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<StudentModel> StudentModels { get; set; }
+    }
+
+=======
+  public interface IUnitOfWork : IDisposable
+    {
+        IRepository<T> Repository<T>() where T : class;
+        void SaveChanges();
+        void BeginTransaction();
+        void RollBackTransaction();
+        void CommitTransaction();
+    }
+
+=======
+
+  public interface IRepository<T>
+    {
+        IEnumerable<T> GetAll(Func<T, bool> predicate = null);
+        T Get(Func<T, bool> predicate);
+        void Add(T entity);
+        void Attach(T entity);
+        void Delete(T entity);
+    }
+
+======
+
+ public class UnitOfWork : IUnitOfWork
+    {
+        private readonly BlogContext entities = null;
+
+        private DbContextTransaction ObjectSetTransaction { get; set; }
+
+        public UnitOfWork()
+        {
+            entities = new BlogContext();
+        }
+
+        //private Dictionary<Type, object> repositories = new Dictionary<Type, object>();
+
+        //[Dependency]
+        public IRepository<T> Repository<T>() where T : class
+        {
+            return new Repositories<T>(entities);
+            //return new Repositories<T>(entities.Set<T>());
+
+            //if (repositories.Keys.Contains(typeof(T)) == true)
+            //{
+            //    return (IRepository<T>)repositories[typeof(T)];
+            //}
+
+            //IRepository<T> repository = new Repositories<T>(entities);
+            //repositories.Add(typeof(T), repository);
+            //return repository;
+        }
+
+        public void SaveChanges()
+        {
+            entities.SaveChanges();
+        }
+
+        public void BeginTransaction()
+        {
+            ObjectSetTransaction = entities.Database.BeginTransaction();
+        }
+
+        public void RollBackTransaction()
+        {
+            ObjectSetTransaction.Rollback();
+            ObjectSetTransaction.Dispose();
+
+        }
+        public void CommitTransaction()
+        {
+            ObjectSetTransaction.Commit();
+            ObjectSetTransaction.Dispose();
+        }
+
+        private bool disposed = false;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    entities.Dispose();
+                }
+            }
+
+            this.disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+    }
+
+=========
+
+ public class Repositories<T> : IRepository<T> where T : class
+    {
+        //private readonly BlogContext entities = null;
+        private readonly IDbSet<T> objectSet = null;
+
+        public Repositories(BlogContext entities)
+        {
+            //this.entities = entities;
+            this.objectSet = entities.Set<T>();
+        }
+
+        public Repositories(IDbSet<T> objectSet)
+        {
+            this.objectSet = objectSet;
+        }
+
+        public IEnumerable<T> GetAll(Func<T, bool> predicate = null)
+        {
+            if (predicate != null)
+            {
+                return objectSet.Where(predicate);
+            }
+
+            return objectSet.AsEnumerable();
+        }
+
+        public T Get(Func<T, bool> predicate)
+        {
+            return objectSet.FirstOrDefault(predicate);
+        }
+
+        public void Add(T entity)
+        {
+            objectSet.Add(entity);
+        }
+
+        public void Attach(T entity)
+        {
+            objectSet.Attach(entity);
+        }
+
+        public void Delete(T entity)
+        {
+            objectSet.Remove(entity);
+        }
+    }
+
+========
+
+ unitOfWork.BeginTransaction();
+
+                    unitOfWork.Repository<Category>().Add(model);
+                    unitOfWork.SaveChanges();
+
+                    unitOfWork.Repository<BlogPost>().Add(new BlogPost { CategoryId = model.Id, Content = "Ahmedabad", PublishDate = DateTime.UtcNow, Title = "City" });
+                    unitOfWork.SaveChanges();
+
+                    unitOfWork.Repository<StudentModel>().Add(new StudentModel { StudentName = "Ritesh", StudentAddress = "Gandhinagar", StudentPhoneNo = "9974103593" });
+                    unitOfWork.SaveChanges();
+
+                    unitOfWork.CommitTransaction();
