@@ -211,3 +211,92 @@ Context
                     unitOfWork.SaveChanges();
 
                     unitOfWork.CommitTransaction();
+
+===========
+@Html.DropDownList("State", new SelectList(string.Empty, "Value", "Text"), "Please select a State", new { style = "width:250px", @class = "dropdown1" })
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        //Dropdownlist Selectedchange event
+        $("#Country").change(function () {
+            $("#State").empty();
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("GetStates")', // we are calling json method
+                dataType: 'json',
+                data: { id: $("#Country").val() },
+                success: function (states) {
+                    $.each(states, function (i, state) {
+                        $("#State").append('<option value="' + state.Value + '">' +
+                             state.Text + '</option>');
+                        // here we are adding option for States
+
+                    });
+                },
+                error: function (ex) {
+                    alert('Failed to retrieve states.' + ex);
+                }
+            });
+            return false;
+        })
+        $("#State").change(function () {
+            $("#city").empty();
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("GetCities")', // we are calling json method
+                dataType: 'json',
+                data: { id: $("#State").val() },
+                success: function (cities) {
+                    $.each(cities, function (i, city) {
+                        $("#city").append('<option value="' + city.Value + '">' + city.Text + '</option>');
+                    });
+                },
+                error: function (ex) { alert("error." + ex); }
+            });
+            return false;
+        });
+    });
+</script>
+
+ public JsonResult GetCities(string id)
+        {
+            PracticalDemoEntities dbCon = new PracticalDemoEntities();
+            List<SelectListItem> cities = new List<SelectListItem>();
+            switch (id)
+            {
+                case "14":
+                    cities.Add(new SelectListItem { Text = "Select", Value = "0" });
+                    cities.Add(new SelectListItem { Text = "AHD", Value = "1" });
+                    cities.Add(new SelectListItem { Text = "GNR", Value = "2" });
+                    break;
+                default:
+                    break;
+            }
+            return Json(new SelectList(cities, "Value", "Text"));
+        }
+
+  <div class="form-group">
+                @Html.LabelFor(m => m.ImageUpload, new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.TextBoxFor(m => m.ImageUpload, new { type = "file", @class = "form-control" })
+                    @Html.ValidationMessageFor(m => m.ImageUpload, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(model => model.CountryId, htmlAttributes: new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.DropDownListFor(model => model.CountryId, new SelectList(Model.Country, "Value", "Text"), "Please select country", new { @class = "form-control" })
+                    @Html.ValidationMessageFor(model => model.CountryId, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+
+        public List<SelectListItem> Country { get; set; }
+
+        [Required]
+        [MyValidateFile]
+        [DataType(DataType.Upload)]
+        [Display(Name = "Choose File")]
+        public HttpPostedFileBase ImageUpload { get; set; }
